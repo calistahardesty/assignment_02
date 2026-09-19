@@ -4,3 +4,44 @@ See reflection.md for what makes a good reflection — be specific, use the
 terminology from this assignment (package, module, ETL, coercion, public API,
 relative import, accumulator, group by, unit vs. integration test), and make it
 actionable.
+
+I learned that a package is just a folder of modules with an __init__.py in it,
+and I found that out the annoying way. test_package_exposes_public_api failed
+because hasattr(sales_pipeline, 'get_raw_sales_data') came back False, but
+every other test still ran fine. Turns out I never wrote __init__.py - I left
+the stub sitting there. I figured Python would throw an error if that file was
+empty, but it doesn't. It just imports the folder and gives you nothing. So
+next time, if the package imports but has no functions in it, check that file
+first instead of assuming my own code is broken.
+ 
+The relative import thing took me a minute. Inside the package you write "from
+.transform import ..." with a dot, because the dot means the module next to
+you. Outside the folder the reports just say "from sales_pipeline import ..."
+with no dot. I also didn't get why clean_currency and clean_quantity aren't in
+the public API at first, since you can still get to them with
+sales_pipeline.transform.clean_currency anyway. I think the point is less about
+hiding them and more about telling whoever reads the file which nine functions
+they're actually supposed to use.
+ 
+Coercion is turning a messy value into a number without the program crashing.
+The one that got me was "$1,200.00" - you have to strip the $ and the comma,
+and if you only do the $ the comma still breaks float(). You can see the rule
+working in the output: on seed 42, 2023-10-26 shows 11 units and $0.00 revenue.
+That's a row with a bad price that got zeroed out but stayed in the data
+instead of disappearing. I also wrote basically the same group by accumulator
+twice, since summarize_by_day is summarize_by_item with the date as the key
+instead of the item. The sort key is the part I'd need to practice - I get that
+key=lambda entry: (-entry["revenue"], entry["item"]) uses the minus to go
+biggest-first while keeping the tiebreaker alphabetical, but I couldn't write
+that from memory yet.
+ 
+Unit tests check one function by itself and integration tests run the actual
+program and look at what it prints. I never hit a case where the scoped test
+passed but its _on_generated_data partner failed, though it's still good to
+know what that would mean. if the scoped one fails the function is wrong, and
+if the scoped one passes but the other doesn't, something before it is feeding
+it bad data. The integration tests caught stuff a unit test couldn't, like the
+exact header strings, which there's no way to guess - you just have to open
+test_integration.py and read them. Next time I'll read that file before I write
+any print() statements, and I'll build up __init__.py as I go instead of saving
+it for last.
